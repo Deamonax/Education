@@ -123,3 +123,4 @@
 .kg-options.pics:has(.kg-big){grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 .kg-option{--kg-bg:#fbfaff}.kg-option.selected{--kg-bg:#eee7fc}.kg-option.right{--kg-bg:#e3f4ea}.kg-option.wrong{--kg-bg:#fdebeb}
 .kg-option .kg-svg.kg-piece{width:auto;max-width:100%;height:auto}
+.kg-home-link div>span{color:#6b5410!important;opacity:1!important}

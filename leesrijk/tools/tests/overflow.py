@@ -18,7 +18,7 @@ LONG = 'ontwikkelingssamenwerking'
 problems = {}
 with sync_playwright() as p:
     b = p.chromium.launch()
-    for W in [320, 360, 390, 768]:
+    for W in [320, 360, 390, 768, 800, 1280]:
         for size, spacing in [('XL', 'extra'), ('L', 'extra'), ('M', 'normal')]:
             pg = b.new_page(viewport={'width': W, 'height': 800}); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
             pg.goto(URL)

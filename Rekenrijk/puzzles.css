@@ -390,7 +390,7 @@
 .field input{font-size:20px;font-weight:800;color:var(--ink);border:2px solid #ddd3ef;border-radius:14px;padding:12px 14px;background:#fff}
 .field input:focus{outline:3px solid #b286ff;outline-offset:2px}
 .groep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.groep-grid button{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:14px;background:#f0e8fb;border:1px solid #e2d2f5;border-bottom:4px solid #d0bae9;color:#8e63b1;font-size:13px;padding:8px}
+.groep-grid button{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:14px;background:#f0e8fb;border:1px solid #e2d2f5;border-bottom:4px solid #d0bae9;color:#6a4596;font-size:13px;padding:8px}
 .groep-grid button b{font-size:26px;line-height:1}
 .groep-grid button.selected{background:var(--purple);color:#fff;border-color:#5935a7}
 .danger-zone{display:flex;flex-direction:column;align-items:flex-start;gap:6px;border-top:1px solid var(--line);padding-top:10px}
@@ -442,7 +442,7 @@
 .fact.vlot{background:#dcf5e6;border-color:#8bcfa9;color:#1f6b45}
 .fact.bijna{background:#fff8e2;border-color:#f0dca0;color:#8c7134}
 .fact.oefenen{background:#fff1e0;border-color:#f0b480;color:#a3561b}
-.fact.nieuw{color:#9b91ad}
+.fact.nieuw{color:#796b91}
 .week{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
 .week b{display:block;font-size:24px}.week span{font-size:12px;color:var(--muted)}
 .checks-list{list-style:none;padding:0 !important}

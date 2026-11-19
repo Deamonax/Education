@@ -368,3 +368,41 @@ dialog .x{position:absolute;right:12px;top:12px;border:0;background:#f1f4f3;bord
 .setrow .sync-more input{border:1.5px solid #bcd3cf;border-radius:12px;padding:12px 14px;font-size:18px;background:#fff;width:100%}
 .sync-join{margin-top:16px}
 .sync-join h2{font-size:20px}
+
+/* ===== UX-ronde nov 2026 ===== */
+.setrow>label{font-weight:700;flex:1 1 220px}
+/* de ei-kaart op Vandaag leende per ongeluk het rooster van de eieren-pagina */
+.card.go.eggs{display:flex;max-width:none;margin:0 0 14px;grid-template-columns:none}
+/* één duidelijke hoofdknop voor het kind */
+.card.go.primary{background:var(--brand2);border-color:transparent;color:#fff;padding:22px;box-shadow:0 5px 0 #1d5654;min-height:96px}
+.card.go.primary b{font-size:22px}
+.card.go.primary small{color:#fff;font-size:15px}
+.card.go.primary .playdot{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:#fff;color:var(--brand2);flex:none}
+.card.go.primary .playdot .ic{width:30px;height:30px;padding:0;background:none;margin-left:4px}
+.card.go.primary:active{transform:translateY(3px);box-shadow:0 2px 0 #1d5654}
+.card.today-done{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#eef8f2;border-color:#bfe3cf}
+.card.today-done>.ic{width:38px;height:38px;padding:8px;border-radius:50%;background:#2f8a5b;color:#fff;flex:none}
+.card.today-done>div{flex:1 1 220px}
+.card.today-done b{display:block;font-size:18px}
+.card.today-done small{color:var(--muted)}
+/* knoppen en keuzelijsten groot genoeg voor kindervingers */
+.field select{border:1.5px solid #bcd3cf;border-radius:12px;padding:12px 14px;font-size:18px;background:#fff;width:100%;min-height:50px}
+.shead .ghost{min-height:44px;padding:0 10px 0 4px}
+.sync-more summary{min-height:44px;display:flex;align-items:center}
+.fhead span{color:color-mix(in srgb,var(--c2) 58%,#1b2a30)}
+/* oefenen op een tablet: groter, rustig in het midden, knoppen onder elkaar in het midden */
+@media (min-width:700px) and (min-height:700px){
+  body[data-size="M"] .main.sessie{--fs:23px}
+  body[data-size="L"] .main.sessie,body:not([data-size]) .main.sessie{--fs:27px}
+  body[data-size="XL"] .main.sessie{--fs:32px}
+  .main.sessie{max-width:880px;display:flex;flex-direction:column;min-height:100dvh;padding-bottom:28px}
+  .main.sessie>.card{flex:1;display:flex;flex-direction:column;justify-content:center;padding:34px 38px;margin:0}
+  .main.sessie>.card .ask,.main.sessie>.card>p{font-size:calc(var(--fs) * .8)}
+  .main.sessie .actions{justify-content:center}
+  .main.sessie .btn{min-height:60px;font-size:19px;padding:15px 26px}
+  .main.sessie .lbtn{min-width:64px;height:80px}
+  .main.sessie .opt{min-height:84px}
+  .main.sessie .shead{margin-bottom:16px}
+  .main.sessie .sname{font-size:17px}
+}
+@media (min-width:700px) and (min-height:700px){.main.sessie .flashbox{height:200px}}
