@@ -1,0 +1,13 @@
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kangoeroe-galerij</title>
+<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/kangoeroe.css">
+<style>body{padding:16px;background:var(--canvas)} .g{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))} h3{margin:4px 0}</style></head>
+<body><h1>Kangoeroe-galerij (ontwikkelaars)</h1><p>Eén opgave per patroon en band. Zaadje via ?seed=.</p><div class="g" id="g"></div>
+<script type="module">
+import * as K from '/kangoeroe.mjs';
+const seed=+new URLSearchParams(location.search).get('seed')||1, only=new URLSearchParams(location.search).get('p');
+let h='';
+for(const l of ['fun','kid'])for(const [p,name] of K.LEVELS[l].patterns)for(const b of [1,2,3]){ if(only&&only!==p)continue;
+ const it=K.makeItem(l,p,b,seed);
+ h+=`<section class="question-card kg-card"><span class="pill">${K.LEVELS[l].name} · ${name} · band ${b}</span><h2 class="kg-q">${it.text}</h2>${it.svg?`<div class="kg-figure">${it.svg}</div>`:''}<div class="kg-options ${it.options.some(o=>o.svg)?'pics':it.options.some(o=>!/^\\d+$/.test(o.text||''))?'words':''}">${it.options.map((o,i)=>`<div class="kg-option static ${i===it.answer?'right':''}"><span class="kg-letter">${K.LETTERS[i]}</span><span class="kg-opt-body">${o.svg||''}${o.text?`<span class="kg-opt-text">${o.text}</span>`:''}</span></div>`).join('')}</div><div class="kg-feedback good"><p>${it.explain}</p>${it.explainSvg?`<div class="kg-figure small">${it.explainSvg}</div>`:''}</div></section>`;}
+document.getElementById('g').innerHTML=h;
+</script></body></html>

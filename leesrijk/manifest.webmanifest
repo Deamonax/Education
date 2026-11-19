@@ -1,0 +1,15 @@
+{
+  "name": "LeesRijk",
+  "short_name": "LeesRijk",
+  "description": "Elke dag een kwartier lezen oefenen, voor kinderen met dyslexie.",
+  "lang": "nl-NL",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbf6ea",
+  "theme_color": "#1f4e5f",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
