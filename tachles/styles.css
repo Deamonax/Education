@@ -202,3 +202,23 @@ td.up { color: var(--ok); font-weight: 700; } td.down { color: var(--no); font-w
   .btn.choice { min-width: 0; flex: 1; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* sync */
+.sync-code{font:800 26px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:3px;display:inline-block;padding:12px 16px;border:1.5px dashed #9fb3d9;border-radius:12px;background:#f4f7fd;user-select:all;margin:6px 0}
+.sync-more{margin-top:14px}
+.sync-more summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+.sync-more input{flex:1 1 180px;text-transform:uppercase;letter-spacing:2px;font-size:18px;padding:12px 14px;min-height:48px}
+
+/* UX round, Nov 2026 */
+.card.warn{border-color:#e7b65c;background:#fff9ec}
+.card.warn h3{margin-top:0}
+nav.top .links a{min-height:44px;min-width:44px;justify-content:center}
+nav.tabs a{min-height:44px;display:inline-flex;align-items:center}
+details>summary{min-height:40px;padding-top:8px;padding-bottom:8px}
+a.back{display:inline-flex;align-items:center;min-height:44px;padding:0 8px 0 0}
+details.he summary{padding:10px 0}
+.btn.small{min-height:44px}
+.sync-more summary::before{content:"▸ ";color:var(--muted)}
+.sync-more[open] summary::before{content:"▾ "}
+.sync-more summary::-webkit-details-marker{display:none}
+.sync-more summary{list-style:none}

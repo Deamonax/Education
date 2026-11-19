@@ -18,18 +18,34 @@
     var hour = new Date().getHours();
     host.appendChild(el("header", { class: "hello" }, el("h1", null, hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"),
       el("p", { class: "muted" }, new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }))));
+    // make a missing AI connection visible, instead of a small line at the bottom
+    var st0 = T.status || {};
+    if (st0.passcode && !S.settings.passcode) host.appendChild(el("section", { class: "card warn" }, el("h3", null, "Enter the passcode"),
+      el("p", null, "The mail check, writing feedback and conversations are locked with a passcode. Enter it once in Settings."), btn("Open Settings", function () { T.go("#settings"); }, "primary")));
+    else if (!st0.claude && !st0.offline) host.appendChild(el("section", { class: "card warn" }, el("h3", null, "AI isn't connected yet"),
+      el("p", null, "Drills, pronunciation and your logbook work now. The mail check, writing feedback and conversations need the AI connection."),
+      el("p", { class: "muted small" }, "For Jaron: add a free GROQ_API_KEY (or ANTHROPIC_API_KEY) in Netlify. See README.")));
     if (!S.intake) {
       host.appendChild(el("section", { class: "card hero" }, el("h2", null, "Start here"),
         el("p", null, "A 20-minute intake: you talk about your work, paste a few real emails, and do a short quiz. The app then knows which mistakes are yours."),
         T.he("אבחון של 20 דקות: מדברים על העבודה, מדביקים כמה מיילים אמיתיים ועושים חידון קצר. ככה האפליקציה יודעת אילו טעויות הן שלך."),
-        btn("Start the intake", function () { T.go("#intake"); }, "primary big")));
+        btn("Start the intake", function () { T.go("#intake"); }, "primary big"),
+        (function () {
+          var inp = el("input", { type: "text", maxlength: "12", autocomplete: "off", autocapitalize: "characters", spellcheck: "false", placeholder: "KBTQ-7M4X", "aria-label": "Code from your other device" });
+          return el("details", { class: "sync-more" }, el("summary", null, "Already using Tachles on another device?"),
+            el("p", { class: "muted small" }, "Open Settings there and copy the code. Enter it here to continue with the same progress."),
+            el("div", { class: "row wrap" }, inp, btn("Continue with this code", function () {
+              if (!inp.value.trim()) { T.toast("Enter the code first."); inp.focus(); return; }
+              T.syncLink(inp.value).then(function () { T.toast("Welcome back. Your progress is here."); T.route(); }, function (e) { T.toast(e.message); });
+            }, "ghost")));
+        })()));
     }
     var today = S.days[t] || {};
     var nBlocks = today.blocks ? Object.keys(today.blocks).length : 0;
     host.appendChild(el("section", { class: "card today" },
       el("div", { class: "row between" }, el("h2", null, "Today"), today.done ? el("span", { class: "pill ok" }, "done") : nBlocks ? el("span", { class: "pill" }, nBlocks + " of " + (today.short ? 2 : 5) + " blocks") : null),
       el("p", null, today.done ? "Session done. Anything extra is a bonus." : "30 minutes: review, today's trap, writing, speaking, pronunciation."),
-      el("div", { class: "row wrap" }, btn(nBlocks && !today.done ? "Continue session" : today.done ? "Do another round" : "Start 30-minute session", function () { T.go("#session"); }, "primary big"),
+      el("div", { class: "row wrap" }, btn(nBlocks && !today.done ? "Continue session" : today.done ? "Do another round" : "Start 30-minute session", function () { T.go("#session"); }, S.intake ? "primary big" : "ghost"),
         btn("10-minute version", function () { T.go("#session/short"); }, "ghost")),
       el("div", { class: "week", "aria-label": "This week" }, weekDays().map(function (d, i) {
         return el("span", { class: "day" + (practiced(d) ? " on" : "") + (d === t ? " now" : "") }, DAYS[i]);
@@ -440,7 +456,7 @@
     var stat = el("ul", { class: "svc" });
     function showStatus() {
       var s = T.status;
-      T.clear(stat).appendChild(el("li", { class: s.claude ? "on" : "" }, "AI (mail check, conversations): " + (s.claude ? (s.direct ? "connected (direct, key on this device)" : "connected") : "not connected")));
+      T.clear(stat).appendChild(el("li", { class: s.claude ? "on" : "" }, "AI (mail check, conversations): " + (s.claude ? (s.direct ? "connected (direct, key on this device)" : s.provider === "groq" ? "connected (free, via Groq)" : "connected") : "not connected")));
       stat.appendChild(el("li", { class: s.whisper ? "on" : "" }, "Verbatim speech-to-text: " + (s.whisper ? "on" : TIO.hasBrowserASR ? "using the browser's (may hide some errors)" : "not available, you'll type")));
       stat.appendChild(el("li", { class: s.azure ? "on" : "" }, "Pronunciation scoring: " + (s.azure ? "on" : "off (you compare by ear)")));
     }
@@ -459,6 +475,18 @@
         st.apiKey = key.value.trim(); TIO.setDirect(st.apiKey, st.model, st.modelFast); T.save();
         TIO.getStatus(true).then(function (s) { T.status = s; showStatus(); T.toast("Saved."); });
       }, "primary")));
+    var linkIn = el("input", { type: "text", id: "sync-link", maxlength: "12", autocomplete: "off", autocapitalize: "characters", spellcheck: "false", placeholder: "KBTQ-7M4X", "aria-label": "Code from your other device" });
+    var h2 = host.querySelector("h2"); host.insertBefore(el("section", { class: "card sync" }, el("h3", null, "Use Tachles on your other devices"),
+      el("p", null, "Enter this code on your phone, laptop or tablet. Every device then shows the same progress, logbook and cards."),
+      el("p", { class: "sync-code", "aria-label": "Your code" }, T.syncCode()),
+      el("p", { class: "muted small", id: "sync-state" }, T.syncLine()),
+      el("details", { class: "sync-more" }, el("summary", null, "I have a code from another device"),
+        el("p", { class: "muted small" }, "The progress on this device will be replaced by the progress of that code. Use the code from the device you've practiced on most."),
+        el("div", { class: "row wrap" }, linkIn, btn("Link this device", function () {
+          if (!linkIn.value.trim()) { T.toast("Enter the code first."); linkIn.focus(); return; }
+          if (!confirmBox("Replace the progress on this device?")) return;
+          T.syncLink(linkIn.value).then(function () { T.toast("Linked. This device now shows your progress."); T.go("#home"); }, function (e) { T.toast(e.message); });
+        }, "primary")))), h2 ? h2.nextSibling : null);
     host.appendChild(el("section", { class: "card" }, el("h3", null, "Connection"), stat,
       el("p", { class: "muted small" }, "Keys live on the server (Netlify environment variables), never in the app. See README.")));
     var file = el("input", { type: "file", accept: "application/json", style: { display: "none" }, onchange: function (e) {
@@ -466,7 +494,7 @@
       f.text().then(function (txt) { var d = JSON.parse(txt); if (!d || d.v !== 1) throw new Error("bad"); d.settings = d.settings || {}; d.settings.apiKey = S.settings.apiKey; d.settings.passcode = S.settings.passcode; T.S = TS.migrate(d); T.save(); T.toast("Imported."); T.route(); }).catch(function () { T.toast("That file doesn't look like a Tachles backup."); });
     } });
     host.appendChild(el("section", { class: "card" }, el("h3", null, "Your data"),
-      el("p", { class: "muted" }, "Everything is stored on this device. Make a backup now and then (recordings are not included in the file)."),
+      el("p", { class: "muted" }, "Your progress syncs with the code above. Recordings stay on this device. A backup file is still handy now and then."),
       el("div", { class: "row wrap" },
         btn("Download backup", function () {
           var copy = JSON.parse(JSON.stringify(S)); copy.settings.apiKey = ""; copy.settings.passcode = "";
@@ -492,7 +520,7 @@
     if (cleanup) { try { cleanup(); } catch (e) { } cleanup = null; }
     TIO.stopSpeak();
     var app = T.clear(document.getElementById("app"));
-    var nav = el("nav", { class: "top" }, el("a", { href: "#home", class: "brand", "aria-label": "Home" }, "Tachles"),
+    var nav = el("nav", { class: "top", "aria-label": "Main" }, el("a", { href: "#home", class: "brand", "aria-label": "Home" }, "Tachles"),
       el("div", { class: "links" }, el("a", { href: "#session", class: name === "session" ? "on" : "" }, "Today"), el("a", { href: "#log", class: name === "log" ? "on" : "" }, "Logbook"),
         el("a", { href: "#progress", class: name === "progress" ? "on" : "" }, "Progress"), el("a", { href: "#settings", class: name === "settings" ? "on" : "", "aria-label": "Settings" }, "⚙")));
     app.appendChild(nav);
@@ -500,9 +528,46 @@
     var view = V[name] || V.home;
     if (name !== "home" && name !== "session") main.appendChild(el("a", { href: "#home", class: "back" }, "← Home"));
     cleanup = view(main) || null;
+    if (!main.querySelector("h1")) { var h = main.querySelector("h2"); if (h) { h.setAttribute("role", "heading"); h.setAttribute("aria-level", "1"); } }
     window.scrollTo(0, 0);
   };
   window.addEventListener("hashchange", T.route);
+  // ---------- same progress on every device ----------
+  // One code per learner. Keys, passcode and the chosen voice stay on this device.
+  var LOCAL = ["apiKey", "passcode", "model", "modelFast", "voice"];
+  var SY = null;
+  function syncView() { var c = JSON.parse(JSON.stringify(T.S)); LOCAL.forEach(function (k) { delete c.settings[k]; }); c.id = "me"; return c; }
+  function syncBusy() { var n = (location.hash || "#home").slice(1).split("/")[0]; return ["", "home", "log", "progress", "settings"].indexOf(n) < 0; }
+  function syncScore(d) { return (d.log ? d.log.length : 0) + Object.keys(d.days || {}).length * 20; }
+  T.syncLine = function () {
+    var st = SY ? SY.state() : null;
+    if (!SY) return "Not available in this browser.";
+    if (st.online === null) return "Connecting…";
+    if (!st.online) return st.reason === "passcode" ? "The server needs the passcode. Enter it below and tap Save." : "Offline right now. Your progress will sync when you're back online.";
+    return "Synced at " + new Date(st.last).toTimeString().slice(0, 5) + ".";
+  };
+  T.syncCode = function () { return SY ? SY.code({ id: "me" }) : ""; };
+  T.syncLink = function (raw) { return SY ? SY.link(raw, "me") : Promise.reject(new Error("Not available in this browser.")); };
+  function syncStart() {
+    if (!window.RijkSync) return;
+    var save = T.save; T.save = function () { save(); if (SY) SY.changed(); };
+    SY = window.RijkSync.create({
+      key: "tachles.sync", endpoint: "api/sync", players: function () { return [syncView()]; }, score: syncScore, busy: syncBusy,
+      headers: function () { return T.S.settings.passcode ? { "x-app-passcode": T.S.settings.passcode } : {}; },
+      apply: function (data) {
+        var keep = {}; LOCAL.forEach(function (k) { keep[k] = T.S.settings[k]; });
+        delete data.id; data.settings = data.settings || {}; LOCAL.forEach(function (k) { data.settings[k] = keep[k]; });
+        T.S = TS.migrate(data); TS.save(T.S); TIO.tts.rate = T.S.settings.rate; return syncView();
+      },
+      refresh: function () { var a = document.activeElement; if (!syncBusy() && !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) T.route(); },
+      onStatus: function () { var x = document.getElementById("sync-state"); if (x) x.textContent = T.syncLine(); },
+      msgBadCode: "That isn't a valid code. A code looks like KBTQ-7M4X.",
+      msgUnknown: "We don't know that code. Check that it's typed correctly.",
+      msgOffline: "No connection. Try again when you're online.",
+      msgPasscode: "The server needs the passcode. Enter it in Settings first."
+    });
+  }
+  syncStart();
   T.boot = function () {
     var started = false;
     function start() { if (started) return; started = true; T.route(); }

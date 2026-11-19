@@ -33,6 +33,17 @@ Een PWA om werk-Engels te trainen voor een Hebreeuwstalige Group Product Manager
   - zelfvertrouwen per week;
   - eerste en laatste opname naast elkaar.
 
+## Gratis AI (Groq)
+
+Geen tokens kopen? Zet alleen **`GROQ_API_KEY`** in Netlify. Maak de key gratis aan op console.groq.com.
+
+Daarmee werken mailcheck, schrijfcorrectie, gesprekken én letterlijke spraak-naar-tekst (Whisper large v3).
+
+- **Model:** standaard `openai/gpt-oss-120b`. Een ander model kies je met `GROQ_MODEL`.
+- **Kwaliteit:** goed, maar subtiele Hebreeuws-Engelse fouten vindt Claude beter.
+- **Gratis limiet:** ongeveer 1.000 verzoeken per dag. Genoeg voor 30 minuten per dag.
+- **Rangorde:** staat er ook een `ANTHROPIC_API_KEY`, dan gebruikt de app Claude. Staat er een `OPENAI_API_KEY`, dan gebruikt hij voor spraak OpenAI.
+
 ## Drie niveaus
 
 | Wat je instelt | Wat werkt |
@@ -73,7 +84,9 @@ Deploy opnieuw na het zetten van de variabelen.
 
 ## Privacy
 
-- Alles (voortgang, logboek, opnames) staat lokaal op het toestel: localStorage en IndexedDB.
+- Voortgang en logboek staan op het toestel en worden onder een eigen code gesynchroniseerd via Netlify Blobs, in jouw Netlify-account. Dat is beveiligd met `APP_PASSCODE` als die is gezet. Zo ziet elk apparaat hetzelfde.
+- Keys, passcode en de gekozen stem worden nooit gesynchroniseerd.
+- Opnames blijven alleen op het toestel.
 - Naar de AI gaan alleen de tekst of audio van de oefening zelf.
 - Je kunt opnames wissen in Settings.
 - De back-up bevat geen opnames, geen key en geen passcode.

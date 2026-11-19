@@ -27,6 +27,16 @@ http.createServer((req, res) => {
     let chunks = []; req.on("data", c => chunks.push(c)); req.on("end", () => {
       const raw = Buffer.concat(chunks);
       const send = (code, obj) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
+      if (u.pathname === "/api/sync") { // in-memory version of netlify/functions/sync.mjs
+        const code = (u.searchParams.get("code") || "").toUpperCase(); globalThis.__sync = globalThis.__sync || new Map(); const m = globalThis.__sync;
+        if (process.env.PASSCODE && req.headers["x-app-passcode"] !== process.env.PASSCODE) return send(401, { error: "passcode" });
+        if (!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) return send(400, { error: "code" });
+        if (req.method === "GET") return m.has(code) ? send(200, m.get(code)) : send(200, { missing: true });
+        const b = JSON.parse(raw.toString() || "{}"), cur = m.get(code);
+        if (cur && cur.at !== (b.base || 0) && cur.at >= (b.base || 0)) return send(409, cur);
+        if (b.data && b.data.settings) { delete b.data.settings.apiKey; delete b.data.settings.passcode; }
+        m.set(code, { at: b.at, data: b.data }); return send(200, { ok: true, at: b.at });
+      }
       if (u.pathname === "/api/status") return send(200, MOCK ? { claude: true, whisper: true, azure: true, passcode: false } : { claude: false, whisper: false, azure: false, passcode: false });
       if (!MOCK) return send(503, { error: "no_key" });
       if (u.pathname === "/api/claude") { const b = JSON.parse(raw.toString() || "{}"); calls.push(b.task); return setTimeout(() => send(200, mock(b.task, b)), 80); }

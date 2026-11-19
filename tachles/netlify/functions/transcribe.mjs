@@ -9,20 +9,21 @@ const VERBATIM = "Um, so, uh, I think we, like, need to check the the numbers. O
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "method" }, 405);
   const g = guard(req); if (g) return g;
-  const key = env("OPENAI_API_KEY");
-  if (!key) return json({ error: "no_key" }, 503);
+  const key = env("OPENAI_API_KEY"), groq = env("GROQ_API_KEY");
+  if (!key && !groq) return json({ error: "no_key" }, 503);
   const buf = await req.arrayBuffer();
   if (!buf.byteLength) return json({ error: "empty" }, 400);
   if (buf.byteLength > 24 * 1024 * 1024) return json({ error: "too_big" }, 413);
   const form = new FormData();
   form.append("file", new Blob([buf], { type: "audio/wav" }), "speech.wav");
-  form.append("model", env("WHISPER_MODEL") || "whisper-1");
+  form.append("model", env("WHISPER_MODEL") || (key ? "whisper-1" : "whisper-large-v3"));
   form.append("language", "en");
   form.append("response_format", "verbose_json");
   form.append("temperature", "0");
   form.append("prompt", VERBATIM);
   try {
-    const r = await fetch("https://api.openai.com/v1/audio/transcriptions", { method: "POST", headers: { authorization: "Bearer " + key }, body: form });
+    const url = key ? "https://api.openai.com/v1/audio/transcriptions" : "https://api.groq.com/openai/v1/audio/transcriptions";
+    const r = await fetch(url, { method: "POST", headers: { authorization: "Bearer " + (key || groq) }, body: form });
     if (!r.ok) return json({ error: "upstream", status: r.status, detail: (await r.text()).slice(0, 300) }, 502);
     const d = await r.json();
     return json({ text: (d.text || "").trim(), duration: d.duration || null,

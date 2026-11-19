@@ -26,6 +26,26 @@ await t("cleanIssues", () => {
 delete env.ANTHROPIC_API_KEY;
 await t("no key -> 503", async () => { const r = await claude(post("/api/claude", { task: "check", text: "hi" })); assert.strictEqual(r.status, 503); });
 
+env.GROQ_API_KEY = "g";
+await t("free Groq fallback", async () => {
+  mockFetch({ choices: [{ message: { content: '{"issues":[{"original":"until Friday","fix":"by Friday","cat":"prep","en":"e","he":"h","severity":3}],"natural":"By Friday.","tone":{"direct":false}}' } }] });
+  const r = await claude(post("/api/claude", { task: "check", text: "until Friday", kind: "mail" }));
+  assert.strictEqual(r.status, 200); const d = await r.json(); assert.strictEqual(d.issues[0].fix, "by Friday");
+  assert(last.url.includes("api.groq.com")); const sent = JSON.parse(last.opts.body);
+  assert.strictEqual(sent.messages[0].role, "system"); assert.strictEqual(sent.messages[1].content, "until Friday"); assert.strictEqual(last.opts.headers.authorization, "Bearer g");
+  const s = await (await status(new Request("http://x/api/status"))).json(); assert.strictEqual(s.provider, "groq"); assert.strictEqual(s.whisper, !!env.OPENAI_API_KEY || true);
+});
+await t("free Groq: transcribe", async () => {
+  const had = env.OPENAI_API_KEY; delete env.OPENAI_API_KEY;
+  mockFetch({ text: " I am responsible on it. ", duration: 2, segments: [] });
+  const r = await transcribe(post("/api/transcribe", new ArrayBuffer(8), { "content-type": "audio/wav" }));
+  assert.strictEqual(r.status, 200); assert(last.url.includes("api.groq.com")); assert.strictEqual(last.opts.body.get("model"), "whisper-large-v3");
+  if (had) env.OPENAI_API_KEY = had;
+});
+await t("free Groq: rate limit message", async () => {
+  mockFetch({ error: "rate" }, 429); const r = await claude(post("/api/claude", { task: "check", text: "x" })); assert.strictEqual(r.status, 429);
+});
+delete env.GROQ_API_KEY;
 env.ANTHROPIC_API_KEY = "k";
 await t("check task", async () => {
   mockFetch({ content: [{ type: "text", text: 'Here: {"issues":[{"original":"responsible on","fix":"responsible for","cat":"prep","en":"e","he":"h","severity":3}],"natural":"I am responsible for it.","tone":{"direct":false}}' }] });
@@ -67,7 +87,7 @@ await t("passcode", async () => {
 await t("status", async () => {
   env.OPENAI_API_KEY = "o";
   const d = await (await status(new Request("http://x/api/status"))).json();
-  assert.deepStrictEqual(d, { claude: true, whisper: true, azure: false, passcode: false });
+  assert.deepStrictEqual(d, { claude: true, provider: "claude", whisper: true, azure: false, passcode: false });
 });
 await t("transcribe", async () => {
   mockFetch({ text: " I am responsible on payouts ", duration: 3.2, segments: [{ start: 0, end: 1.5, text: "I am", id: 0 }] });
