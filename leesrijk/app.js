@@ -233,7 +233,7 @@
     return '<div class="card goal"><b>Op weg naar week ' + next + '</b><ul>' +
       '<li class="' + (s1 ? 'ok' : '') + '">' + (s1 ? icon('check') : '') + 'Oefeningen deze week: <b>' + Math.min(g.sessions, g.needSessions) + ' van ' + g.needSessions + '</b></li>' +
       '<li class="' + (s2 ? 'ok' : '') + '">' + (s2 ? icon('check') : '') + 'Goed bij hakken, zoeken, lang/kort en dictee: <b>' + (pct === null ? 'nog niet genoeg gedaan' : pct + '%') + '</b> (' + need + '% nodig, laatste 20 per onderdeel)</li></ul>' +
-      '<p class="small">Flitsen telt niet mee: dat wordt vanzelf moeilijker als het goed gaat. Ouders kunnen de week ook zelf kiezen bij Instellingen.</p></div>';
+      '<p class="small">Flitsen telt niet mee: dat wordt vanzelf moeilijker als het goed gaat. </p><button class="btn ghost" data-a="nextweek" data-ask="1">Ouders: door naar week ' + next + '</button></div>';
   }
   function streakDays(p) { var n = 0, d = new Date(); for (var i = 0; i < 400; i++) { var k = d.toISOString().slice(0, 10); if (p.days[k]) n++; else if (i > 0) break; d.setDate(d.getDate() - 1); } return n; }
   function testDue(p) { var t = p.tests[p.tests.length - 1]; return !t || (Date.now() - new Date(t.date).getTime()) > 6 * 864e5; }
@@ -841,7 +841,7 @@
       case 'dictsay': sayDictee(); break;
       case 'seen': sess.st.seen = true; render(); break;
       case 'checkdict': checkDict(); break;
-      case 'nextweek': p.week = Math.min(12, p.week + 1); save(); toast('Op naar week ' + p.week + '!'); render(); break;
+      case 'nextweek': if (b.dataset.ask && b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Zeker weten? Tik nog eens'; return; } p.week = Math.min(12, p.week + 1); sess = null; save(); toast('Op naar week ' + p.week + '!'); render(); break;
       /* samen lezen */
       case 'samen': startSamen(b.dataset.k, b.dataset.t); break;
       case 'othertext': todayTexts(p, true); toast('Er staan nieuwe teksten klaar.'); render(); break;
