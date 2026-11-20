@@ -23,11 +23,14 @@ export function createKangoeroe(ctx) {
   function home() {
     const k = K(), L = KG.LEVELS[k.level], f = KG.contestFormat(k.level, user().groep), sk = k.skill[k.level] || {};
     const last = k.contests.filter(c => c.level === k.level).slice(-1)[0];
-    return `<div class="page-heading"><div><div class="eyebrow">KANGOEROE · ${L.name.toUpperCase()} · ${L.groups.toUpperCase()}</div><h1>Kangoeroe-training <span class="heading-star">✦</span></h1><p>Puzzels zoals bij de Kangoeroewedstrijd. Elke opgave is nieuw.</p>
-      <label class="kg-level">Niveau <select data-kg-level><option value="fun" ${k.level === 'fun' ? 'selected' : ''}>wizFUN (groep 3-4)</option><option value="kid" ${k.level === 'kid' ? 'selected' : ''}>wizKID (groep 5-6)</option></select></label></div></div>
+    const r = KG.puzzleLevel(k, k.level);
+    return `<div class="page-heading"><div><div class="eyebrow">KANGOEROE · ${L.name.toUpperCase()} · ${L.groups.toUpperCase()}</div><h1>Kangoeroe-training</h1><p>Puzzels zoals bij de Kangoeroewedstrijd. Elke opgave is nieuw.</p>
+      <label class="kg-level">Wedstrijd <select data-kg-level><option value="fun" ${k.level === 'fun' ? 'selected' : ''}>wizFUN (groep 3-4)</option><option value="kid" ${k.level === 'kid' ? 'selected' : ''}>wizKID (groep 5-6)</option></select></label></div>
+      <div class="heading-actions">${ctx.kgBadge ? ctx.kgBadge(r) : ''}</div></div>
+    <div class="kg-ranks" aria-hidden="true">${KG.RANKS.map((n, i) => `<span class="${i + 1 === r.n ? 'now' : i + 1 < r.n ? 'done' : ''}">${i + 1}. ${n}</span>`).join('')}</div>
     <div class="kg-modes">
-      <section class="kg-mode practice"><span class="kg-mode-icon">${I('bulb')}</span><h2>Oefenen</h2><p>Het spel kiest de puzzelsoort die jij nog het lastigst vindt. Na elk antwoord zie je hoe het zit.</p><button class="button yellow big" data-action="kg-practice">${I('play')} Oefenen</button></section>
-      <section class="kg-mode contest"><span class="kg-mode-icon">${I('clock')}</span><h2>Wedstrijd</h2><p>${f.n} vragen in ${f.minutes} minuten, net als de echte. Twijfel je? Dan mag je overslaan.</p><button class="button purple big" data-action="kg-contest-intro">${I('flag')} Naar de wedstrijd</button>${last ? `<small>Vorige keer: ${fmtScore(last)}</small>` : ''}</section>
+      <section class="kg-mode practice"><span class="kg-mode-icon">${I('bulb')}</span><h2>Oefenen</h2><p>Het spel kiest de puzzelsoort die jij nog het lastigst vindt. Na elk antwoord zie je hoe het zit.</p><button class="button purple big" data-action="kg-practice">${I('play')} Oefenen</button></section>
+      <section class="kg-mode contest"><span class="kg-mode-icon">${I('clock')}</span><h2>Wedstrijd</h2><p>${f.n} vragen in ${f.minutes} minuten, net als de echte. Twijfel je? Dan mag je overslaan.</p><button class="button secondary big" data-action="kg-contest-intro">${I('flag')} Naar de wedstrijd</button>${last ? `<small>Vorige keer: ${fmtScore(last)}</small>` : ''}</section>
     </div>
     <div class="section-title"><h2>Jouw puzzelsoorten</h2><button class="quiet kg-parents-link" data-action="kg-parents">${I('chart')} Voor ouders</button></div>
     <div class="kg-patterns">${L.patterns.map(([id, name, desc]) => { const s = sk[id], m = KG.mastery(s); return `<div class="kg-pattern"><strong>${esc(name)}</strong><small>${esc(desc)}</small>${masteryBar(s ? m : 0)}<span class="kg-pattern-meta">${s ? `${m}% · ${s.n} gedaan` : 'Nog niet geprobeerd'}</span></div>`; }).join('')}</div>`;

@@ -977,6 +977,15 @@ export const pCorrect = (th, band) => GUESS + (1 - GUESS) * sig(SLOPE * (th - ba
 // Beheersing: kans dat het kind een middelzware opgave (band 2) echt snapt, zonder gokken.
 export const mastery = s => Math.round(100 * sig(SLOPE * ((s ? s.th : 1.5) - 2)));
 export const dayIndex = (t = Date.now()) => Math.floor((t - new Date(t).getTimezoneOffset() * 60000) / 864e5);
+/* Puzzelniveau 1 t/m 5 over alle puzzelsoorten van een niveau: zo ziet het kind hoe ver het is. */
+export const RANKS = ['Kangoeroekindje', 'Huppelaar', 'Springer', 'Verspringer', 'Kampioen'];
+export function puzzleLevel(k, lvl) {
+  lvl = lvl || (k && k.level) || 'fun';
+  const L = LEVELS[lvl], sk = ((k && k.skill) || {})[lvl] || {}, ids = L.patterns.map(x => x[0]);
+  const avg = ids.reduce((a, id) => a + (sk[id] && sk[id].n ? mastery(sk[id]) : 0), 0) / ids.length;
+  const n = Math.min(5, 1 + Math.floor(avg / 20));
+  return { n, name: RANKS[n - 1], pct: Math.round(avg), level: lvl, levelName: L.name };
+}
 export function freshKanga(groep) { return { level: levelFor(groep), skill: {}, hist: {}, contests: [], seed: Math.floor(Math.random() * 1e9), served: 0, last: [] }; }
 export function update(k, lvl, pattern, band, ok, weight = 1) {
   const sk = k.skill[lvl] ||= {}, s = sk[pattern] ||= { th: 1.5, n: 0, ok: 0 };

@@ -124,3 +124,8 @@
 .kg-option{--kg-bg:#fbfaff}.kg-option.selected{--kg-bg:#eee7fc}.kg-option.right{--kg-bg:#e3f4ea}.kg-option.wrong{--kg-bg:#fdebeb}
 .kg-option .kg-svg.kg-piece{width:auto;max-width:100%;height:auto}
 .kg-home-link div>span{color:#6b5410!important;opacity:1!important}
+/* rustiger kleuren: witte kaarten, paars voor de knoppen, oranje alleen voor de kangoeroe */
+.kg-mode.practice,.kg-mode.contest{background:#fff}
+.kg-mode-icon{color:#c56a2a;background:#fdeee2;border-color:#f0d2bb}
+.kg-mode.contest .kg-mode-icon{color:var(--purple);background:#efe9fd;border-color:#ddd3ef}
+.kg-bar i{background:linear-gradient(90deg,#e09a62,#c56a2a)}
