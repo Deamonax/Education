@@ -218,6 +218,7 @@ export function cleanLeger(x) {
   const out = { stars: {}, plays: 0, wins: 0, team: [], coins: 0, gear: {} };
   if (!x || typeof x !== 'object') return out;
   if (x.stars && typeof x.stars === 'object') for (const [k, v] of Object.entries(x.stars)) { const n = +k, s = +v; if (n >= 1 && n <= LEVELS && s >= 0 && s <= 3) out.stars[n] = Math.floor(s); }
+  if (Number.isFinite(+x.pace) && +x.pace >= .8 && +x.pace <= 1.8) out.pace = +x.pace;
   out.plays = Math.max(0, x.plays | 0); out.wins = Math.max(0, x.wins | 0); out.coins = Math.max(0, Math.min(1e6, x.coins | 0));
   if (x.gear && typeof x.gear === 'object') for (const g of GEAR) { const k = x.gear[g.id] | 0; if (k > 0) out.gear[g.id] = Math.min(g.cost.length, k); }
   if (Array.isArray(x.team)) out.team = x.team.filter(t => Number.isInteger(t)).slice(0, 3);

@@ -16,6 +16,13 @@ export function createRunnerGame(ctx) {
   let run = null, onEnd = null, onChange = null, img = null;
   // spelwereld
   let lane = 1, px = 0, scroll = 0, speed = .5, objs = [], spawnIn = .6, freeze = 0, flash = null, texts = [], pops = [], joiners = [], bolts = [];
+  // de vriendjes van het kind als poppetjes: elk hoofd is een vriendje, het shirt in de kleur van de familie
+  let faces = [], pace = 1, onPace = null, lastSteer = 0;
+  function makeFace(src, hue) {
+    const f = { c: document.createElement('canvas'), ok: false, shirt: `hsl(${hue},62%,52%)`, dark: `hsl(${hue},55%,34%)` }; f.c.width = f.c.height = 96;
+    const im = new Image(); im.onload = () => { const x = f.c.getContext('2d'); x.save(); x.beginPath(); x.arc(48, 48, 44, 0, TAU); x.clip(); x.drawImage(im, -6, -6, 108, 108); x.restore(); x.lineWidth = 6; x.strokeStyle = '#fff'; x.beginPath(); x.arc(48, 48, 44, 0, TAU); x.stroke(); f.ok = true; }; im.src = src;
+    return f;
+  }
   let shown = 0, bossObj = null, bannerQ = null, qStart = 0, finalAnim = null, clashAnim = null;
 
   /* ---------- perspectief ---------- */
@@ -55,9 +62,20 @@ export function createRunnerGame(ctx) {
     g.fillStyle = ['#e85d5d', '#ffb648', '#7a6cf0', '#44c2a0'][i % 4]; g.fillRect(px - w / 2, py - h, w, h);
     g.fillStyle = '#f7f1e3'; g.beginPath(); g.moveTo(px - w * .7, py - h); g.lineTo(px, py - h - 22 * s); g.lineTo(px + w * .7, py - h); g.fill();
   }
-  function person(x, z, team, t, scale = 1) {
+  function person(x, z, team, t, scale = 1, fi = 0) {
     const s = sc(z) * scale * unit(), p_x = X(x, z), py = Y(z), bob = Math.sin(t * 12 + x * 13 + z * 7) * 2 * s;
     if (s < .04) return;
+    const f = team === 'me' && faces.length ? faces[fi % faces.length] : null;
+    if (f) { // vriendje: lijfje in familiekleur met een groot hoofd
+      g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(p_x, py, 12 * s, 4 * s, 0, 0, TAU); g.fill();
+      const step = Math.sin(t * 14 + x * 9) * 4 * s;
+      g.fillStyle = f.dark; g.fillRect(p_x - 6 * s, py - 11 * s + bob, 5 * s, 11 * s + step); g.fillRect(p_x + 1 * s, py - 11 * s + bob, 5 * s, 11 * s - step);
+      g.fillStyle = f.shirt; g.beginPath(); g.roundRect(p_x - 9 * s, py - 26 * s + bob, 18 * s, 17 * s, 7 * s); g.fill();
+      const hs = 30 * s;
+      if (f.ok) g.drawImage(f.c, p_x - hs / 2, py - 26 * s - hs + 4 * s + bob, hs, hs);
+      else { g.fillStyle = '#fff'; g.beginPath(); g.arc(p_x, py - 37 * s + bob, hs / 2, 0, TAU); g.fill(); }
+      return;
+    }
     g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(p_x, py, 11 * s, 4 * s, 0, 0, TAU); g.fill();
     g.fillStyle = team === 'me' ? '#2f4f9a' : '#8f2a2a'; const step = Math.sin(t * 14 + x * 9) * 4 * s;
     g.fillRect(p_x - 6 * s, py - 12 * s + bob, 5 * s, 12 * s + step); g.fillRect(p_x + 1 * s, py - 12 * s + bob, 5 * s, 12 * s - step);
@@ -68,7 +86,7 @@ export function createRunnerGame(ctx) {
   }
   const SPOTS = Array.from({ length: 70 }, (_, i) => { const r = Math.sqrt(i + .5) * .05, a = i * 2.39996; return { x: Math.cos(a) * r, z: .05 + Math.abs(Math.sin(a) * r) * .9 }; });
   const visible = n => n <= 30 ? n : Math.min(70, 30 + Math.round(Math.sqrt(n - 30) * 3));
-  function crowd(n, cx, cz, team, t) { const v = visible(Math.max(0, Math.round(n))); SPOTS.slice(0, v).map(p => ({ x: cx + p.x, z: cz + p.z })).sort((a, b) => b.z - a.z).forEach(p => person(p.x, p.z, team, t)); }
+  function crowd(n, cx, cz, team, t) { const v = visible(Math.max(0, Math.round(n))); SPOTS.slice(0, v).map((p, i) => ({ x: cx + p.x, z: cz + p.z, i })).sort((a, b) => b.z - a.z).forEach(p => person(p.x, p.z, team, t, 1, p.i)); }
   function label(txt, x, y, size, fill = '#fff', stroke = 'rgba(20,24,60,.9)') {
     g.font = `900 ${size}px system-ui, -apple-system, Segoe UI, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.lineWidth = Math.max(3, size / 5); g.strokeStyle = stroke; g.lineJoin = 'round'; g.strokeText(txt, x, y); g.fillStyle = fill; g.fillText(txt, x, y);
@@ -109,13 +127,8 @@ export function createRunnerGame(ctx) {
     label(String(Math.max(0, Math.round(b.shownHp))), px, by - 14 * s, Math.max(18, 15 * s));
   }
   function leader(t) {
-    const z = .02, s = sc(z) * unit(), p_x = X(px, z), py = Y(z);
-    person(px, z, 'me', t, 1.6);
-    const fx = p_x + 30 * s, fy = py - 130 * s;
-    g.strokeStyle = '#5b4a3a'; g.lineWidth = 3 * s; g.beginPath(); g.moveTo(fx, py - 25 * s); g.lineTo(fx, fy - 8 * s); g.stroke();
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(fx + 20 * s, fy + 6 * s, 19 * s, 0, TAU); g.fill();
-    if (img && img.complete && img.naturalWidth) { g.save(); g.beginPath(); g.arc(fx + 20 * s, fy + 6 * s, 16 * s, 0, TAU); g.clip(); g.drawImage(img, fx + 4 * s, fy - 10 * s, 32 * s, 32 * s); g.restore(); }
-    g.strokeStyle = '#2f7de1'; g.lineWidth = 3 * s; g.beginPath(); g.arc(fx + 20 * s, fy + 6 * s, 18 * s, 0, TAU); g.stroke();
+    // je eerste vriendje rent groot voorop
+    person(px, .02, 'me', t, 1.9, 0);
   }
   function hud(t) {
     // som-banner bovenaan
@@ -142,7 +155,7 @@ export function createRunnerGame(ctx) {
     if (!ev) return;
     if (objs.some(o => !o.done && o.idx === run.i)) return;
     const z = 3.4;
-    if (ev.t === 'q') { const sum = makeSum(); objs.push({ t: 'q', idx: run.i, z, ...sum, hint: run.fx.hint }); run.fx.hint = false; qStart = performance.now(); ctx.speak(sum.spoken); }
+    if (ev.t === 'q') { const sum = makeSum(); objs.push({ t: 'q', idx: run.i, z, z0: z, ...sum, hint: run.fx.hint }); run.fx.hint = false; qStart = performance.now(); ctx.speak(sum.spoken); }
     else if (ev.t === 'g') { objs.push({ t: 'g', idx: run.i, z, opts: RN.gates(run) }); }
     else if (ev.t === 'c') { objs.push({ t: 'c', idx: run.i, z, lane: Math.floor(Math.random() * 3), got: 0, n: ev.n }); }
     else if (ev.t === 'e') { objs.push({ t: 'e', idx: run.i, z, n: RN.squadSize(run, ev) }); }
@@ -155,7 +168,17 @@ export function createRunnerGame(ctx) {
     if (!q || !q.tokens) { const a = 2 + Math.floor(Math.random() * 8), b = 1 + Math.floor(Math.random() * 9); q = { tokens: [a, '+', b, '=', { cell: 'x' }], cells: [{ id: 'x', answer: a + b }], spoken: `${a} plus ${b}`, kind: 'sum', topic: 'add', key: 'r' + a + b }; }
     const ans = +q.cells[0].answer, ch = RN.choices(ans);
     const text = q.tokens.map(t => typeof t === 'object' ? '?' : String(t)).join(' ');
-    return { q, text, options: ch.options, right: ch.right, spoken: (q.spoken || text).replace(/\?/g, 'hoeveel') };
+    return { q, text, options: ch.options, right: ch.right, spoken: (q.spoken || text).replace(/\?/g, 'hoeveel'), T: thinkTime(q) * pace };
+  }
+  /* bedenktijd: grotere getallen, keer/delen, een gat in het midden en tientallen over = meer tijd */
+  function thinkTime(q) {
+    const nums = q.tokens.filter(t => typeof t === 'number' || /^\d+$/.test(t)).map(Number).concat(+q.cells[0].answer), op = q.tokens[1], big = Math.max(...nums);
+    let T = 5.5;
+    if (big > 10) T += 1.5; if (big > 20) T += 2; if (big > 100) T += 2.5;
+    if (op === '×' || op === ':') T += 2;
+    if (typeof q.tokens[q.tokens.length - 1] !== 'object') T += 2;
+    const [a, , b] = q.tokens; if ((op === '+' || op === '−') && typeof a === 'number' && typeof b === 'number' && big > 10) { const o = op === '+' ? a % 10 + b % 10 >= 10 : a % 10 < b % 10; if (o) T += 2; }
+    return T;
   }
   function change() { onChange && onChange(); }
   function say(txt, c = '#fff') { texts.push({ txt, t: 0, c }); }
@@ -165,6 +188,10 @@ export function createRunnerGame(ctx) {
     if (o.t === 'q') {
       const ok = pick === o.right; o.done = true; o.picked = pick;
       ctx.record(o.q, ok, performance.now() - qStart);
+      // tempo past zich aan: fout = volgende keer meer tijd; snel en goed = iets vlotter
+      const used = lastSteer > qStart ? (lastSteer - qStart) / 1000 : o.T;
+      if (!ok) pace = Math.min(1.8, pace * 1.15); else if (used < o.T * .45) pace = Math.max(.8, pace * .96);
+      onPace && onPace(pace);
       const wasBoss = run.phase === 'boss';
       const r = RN.answer(run, ok);
       if (ok) { ctx.sound('correct'); flash = { c: 'rgba(60,200,110,.25)', t: 0 }; if (wasBoss) { bolts.push({ t: 0 }); setTimeout(() => { if (bossObj) bossObj.shake = .4; }, 250); say('Raak!', '#d6ffe0'); } else { addJoiners(r.gain); say('+' + r.gain, '#c9ffd8'); } ctx.speak(wasBoss ? 'Raak!' : 'Goed zo!'); }
@@ -182,7 +209,7 @@ export function createRunnerGame(ctx) {
       o.done = true; freeze = clashAnim.dur; change();
     }
   }
-  function addJoiners(n, silent) { const k = Math.min(n, 20); for (let i = 0; i < k; i++) joiners.push({ x: (i % 2 ? 1 : -1) * (1.15 + Math.random() * .3), z: .1 + Math.random() * .6, k: -i * .04 }); shown = run.army - k; if (!silent) { } }
+  function addJoiners(n, silent) { const k = Math.min(n, 20); for (let i = 0; i < k; i++) joiners.push({ x: (i % 2 ? 1 : -1) * (1.15 + Math.random() * .3), z: .1 + Math.random() * .6, k: -i * .04, f: i }); shown = run.army - k; if (!silent) { } }
 
   function frame(now) {
     if (!running) return;
@@ -202,12 +229,12 @@ export function createRunnerGame(ctx) {
       else if (o.t === 'c') coinRow(o, t);
       else if (o.t === 'e' && (!o.done || clashAnim?.o === o)) { const n = clashAnim?.o === o ? clashAnim.enemiesLeft ?? o.n : o.n; if (n > 0) { crowd(n, 0, o.z, 'foe', t); label(String(Math.round(n)), X(0, o.z), Y(o.z + .15) - 70 * sc(o.z) * unit(), Math.max(18, 40 * sc(o.z)), '#ffd9d2'); } }
     }
-    for (const j of joiners) person(j.x, j.z, 'me', t);
+    for (const j of joiners) person(j.x, j.z, 'me', t, 1, j.f || 0);
     crowd(shown, px, .12, 'me', t);
     leader(t);
     for (const p of pops) { g.globalAlpha = 1 - p.t; g.fillStyle = p.c; g.beginPath(); g.arc(X(p.x, p.z), Y(p.z) - 20 * sc(p.z), (6 + p.t * 18) * sc(p.z), 0, TAU); g.fill(); g.globalAlpha = 1; }
     for (const b of bolts) if (bossObj) { const x0 = X(px, 0), y0 = Y(0) - 120, x1 = X(0, bossObj.z), y1 = Y(bossObj.z) - 150 * sc(bossObj.z), k = b.t; g.strokeStyle = `rgba(120,220,255,${1 - k})`; g.lineWidth = 8; g.beginPath(); g.moveTo(x0 + (x1 - x0) * Math.max(0, k - .3), y0 + (y1 - y0) * Math.max(0, k - .3)); g.lineTo(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k); g.stroke(); }
-    label(String(Math.max(0, Math.round(shown + joiners.length * 0))), X(px, .12), Y(.12) - 150 * sc(.12) * unit(), Math.max(28, W * .07));
+    label(String(Math.max(0, Math.round(shown + joiners.length * 0))), X(px, .12), Y(.12) - 200 * sc(.12) * unit(), Math.max(28, W * .07));
     for (const x of texts) { g.globalAlpha = Math.min(1, 2 - 2 * x.t); label(x.txt, W / 2, H * .42 - x.t * 50, Math.max(24, W * .06), x.c); g.globalAlpha = 1; }
     if (flash) { g.fillStyle = flash.c; g.globalAlpha = 1 - flash.t; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
     hud(t);
@@ -226,7 +253,8 @@ export function createRunnerGame(ctx) {
     if (finalAnim) { const f = finalAnim; f.t += dt; const k = Math.min(1, f.t / f.dur), n = Math.min(f.res.mine, f.res.need) * k; shown = Math.max(0, f.res.mine - n); if (bossObj) { bossObj.shownHp = Math.max(0, f.res.need - n); bossObj.z += (.55 - bossObj.z) * Math.min(1, dt * 2); } if (Math.random() < .6) pops.push({ x: (Math.random() - .5) * .5, z: .4 + Math.random() * .1, t: 0, c: '#ffd166' }); if (k >= 1 && f.t > f.dur + .8) { finalAnim = null; end(); } else if (k >= 1 && !f.said) { f.said = true; if (f.res.won) { bossObj = null; say('Gewonnen!', '#fff3b0'); } else say('Te sterk!', '#ffd1cc'); } return; }
     if (freeze > 0) { freeze -= dt; return; }
     for (const o of objs) if (o.t === 'e' && !o.done) o.n = run.fx.skip ? 0 : RN.squadSize(run, run.track.events[o.idx]);
-    const v = speed;
+    const nq = objs.filter(o => o.t === 'q' && !o.done).sort((a, b) => a.z - b.z)[0];
+    const v = nq ? Math.min(speed, (nq.z0 - .2) / nq.T) : speed;
     scroll += dt * v * 1.2;
     for (const o of objs) o.z -= dt * v;
     if (bossObj && run.phase === 'boss') bossObj.z += (2.9 - bossObj.z) * Math.min(1, dt * 1.5);
@@ -237,7 +265,7 @@ export function createRunnerGame(ctx) {
     if (run.done) return;
     if (run.phase === 'boss') {
       if (run.bossQ >= run.track.bossQ) { if (!objs.some(o => !o.done)) { const res = RN.finalFight(run); finalAnim = { t: 0, dur: Math.min(2.6, .8 + Math.min(res.mine, res.need) * .03), res }; change(); } return; }
-      if (!objs.some(o => !o.done)) { spawnIn -= dt; if (spawnIn <= 0) { const sum = makeSum(); objs.push({ t: 'q', idx: 'b' + run.bossQ, z: 2.5, ...sum, hint: run.fx.hint }); run.fx.hint = false; qStart = performance.now(); ctx.speak(sum.spoken); spawnIn = 1.2; } }
+      if (!objs.some(o => !o.done)) { spawnIn -= dt; if (spawnIn <= 0) { const sum = makeSum(); objs.push({ t: 'q', idx: 'b' + run.bossQ, z: 2.5, z0: 2.5, ...sum, hint: run.fx.hint }); run.fx.hint = false; qStart = performance.now(); ctx.speak(sum.spoken); spawnIn = 1.2; } }
       return;
     }
     const pending = objs.filter(o => !o.done);
@@ -247,7 +275,7 @@ export function createRunnerGame(ctx) {
   function end() { if (!run || run.ended) return; run.ended = true; setTimeout(() => onEnd && onEnd(run), 400); }
 
   /* ---------- besturen ---------- */
-  function steer(d) { if (paused || !run) return; lane = Math.max(0, Math.min(2, lane + d)); ctx.sound && ctx.sound('tap'); }
+  function steer(d) { if (paused || !run) return; lastSteer = performance.now(); lane = Math.max(0, Math.min(2, lane + d)); ctx.sound && ctx.sound('tap'); }
   function laneAt(clientX, clientY) {
     const r = canvas.getBoundingClientRect(), x = clientX - r.left, y = clientY - r.top;
     // tik op een antwoordboog of ton: stuur daarheen
@@ -262,12 +290,12 @@ export function createRunnerGame(ctx) {
     if (touchX === null) return;
     const dx = e.clientX - touchX; touchX = null;
     if (Math.abs(dx) > 30) steer(dx > 0 ? 1 : -1);
-    else { lane = Math.max(0, Math.min(2, laneAt(e.clientX, e.clientY))); }
+    else { lane = Math.max(0, Math.min(2, laneAt(e.clientX, e.clientY))); lastSteer = performance.now(); }
   });
 
   return {
     canvas,
-    start(r, opts) { run = r; onEnd = opts.onEnd; onChange = opts.onChange; img = null; if (opts.face) { img = new Image(); img.src = opts.face; } lane = 1; px = 0; objs = []; joiners = []; texts = []; pops = []; bolts = []; bossObj = null; finalAnim = null; clashAnim = null; shown = r.army; spawnIn = 1.2; paused = false; freeze = 0; speed = opts.speed || .5; },
+    start(r, opts) { run = r; onEnd = opts.onEnd; onChange = opts.onChange; onPace = opts.onPace; pace = opts.pace || 1; faces = (opts.team || []).map(t => makeFace(t.src, t.hue)); lane = 1; px = 0; objs = []; joiners = []; texts = []; pops = []; bolts = []; bossObj = null; finalAnim = null; clashAnim = null; shown = r.army; spawnIn = 1.2; paused = false; freeze = 0; speed = opts.speed || .5; },
     mount(slot) { if (!slot) return; if (canvas.parentNode !== slot) slot.appendChild(canvas); resize(); if (!running) { running = true; last = 0; raf = requestAnimationFrame(frame); } },
     key(e) { if (!run) return false; if (e.key === 'ArrowLeft' || e.key === 'a') { steer(-1); return true; } if (e.key === 'ArrowRight' || e.key === 'd') { steer(1); return true; } if (e.key === ' ' || e.key === 'p') { paused = !paused; change(); return true; } if (['1', '2', '3'].includes(e.key)) { lane = +e.key - 1; return true; } return false; },
     pause(v = true) { paused = v; change(); },

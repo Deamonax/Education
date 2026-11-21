@@ -169,7 +169,7 @@ export function createLeger(ctx) {
     run = RN.newRun(level, g, team.map(id => ctx.PETS[id]), data().gear);
     view = 'run'; fx = null; endRes = null;
     const speed = (g <= 3 ? .62 : g === 4 ? .7 : .78) + Math.min(30, level) * .008;
-    game.start(run, { face: srcOf(team[0]), speed, onEnd: () => { endRes = run.finalRes || null; finish(); }, onChange: () => { const el = document.getElementById('lg-army-now'); if (el) el.textContent = run.army; } });
+    game.start(run, { team: team.map(id => ({ src: srcOf(id), hue: (ctx.PETS[id].group * 37 + 200) % 360 })), pace: data().pace || (g <= 3 ? 1.15 : 1), onPace: v => { data().pace = Math.round(v * 100) / 100; }, speed, onEnd: () => { endRes = run.finalRes || null; finish(); }, onChange: () => { const el = document.getElementById('lg-army-now'); if (el) el.textContent = run.army; } });
     ctx.render(); window.scrollTo(0, 0);
     ctx.speak(`Level ${level}. Stuur je leger naar het goede antwoord. Veeg of tik naar links of rechts.`);
   }
