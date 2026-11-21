@@ -2,6 +2,8 @@
 import * as LG from './leger.mjs';
 import * as PZ from './puzzles.mjs';
 import { createStage } from './leger-stage.mjs';
+import * as RN from './runner.mjs';
+import { createRunnerGame } from './runner-game.mjs';
 
 const KNIGHT = (cls = '') => `<svg class="lg-knight ${cls}" viewBox="0 0 24 28" aria-hidden="true"><path d="M12 2c5 0 8 4 8 9v6H4v-6c0-5 3-9 8-9z" class="helm"/><rect x="5" y="11" width="14" height="3" rx="1" class="visor"/><path d="M12 2v-1.5" class="plume"/><path d="M4 18h16l-2 9H6z" class="body"/></svg>`;
 const BOSS = `<svg class="lg-boss-svg" viewBox="0 0 120 120" aria-hidden="true"><path d="M60 10c28 0 46 22 46 50v30H14V60c0-28 18-50 46-50z" class="helm"/><path d="M22 52h76v12H22z" class="visor"/><circle cx="44" cy="58" r="4" class="eye"/><circle cx="76" cy="58" r="4" class="eye"/><path d="M30 14l-8-12 18 8M90 14l8-12-18 8" class="horn"/><path d="M14 90h92l-8 26H22z" class="body"/></svg>`;
@@ -9,6 +11,7 @@ const BOSS = `<svg class="lg-boss-svg" viewBox="0 0 120 120" aria-hidden="true">
 export function createLeger(ctx) {
   const I = ctx.icon, esc = ctx.escape;
   const stage = createStage();
+  const game = createRunnerGame({ speak: t => ctx.speak(t), sound: s => ctx.sound(s), record: (q, ok, ms) => ctx.record(q, ok, ms), steps: h => ctx.steps(h), types: () => LG.sumTypes(ctx.user().groep) });
   const srcOf = id => (ctx.petImg(id).match(/src="([^"]+)"/) || [])[1] || '';
   let anim = false;
   let view = 'map', who = null, level = 1, team = [], run = null, q = null, st = null, card = null, last = null, busy = false, gate = null, fx = null, battleRes = null, endRes = null, qStart = 0;
@@ -135,21 +138,23 @@ export function createLeger(ctx) {
   }
   /* ---------- uitslag ---------- */
   function finish() {
-    const d = data(), s = LG.stars(run);
+    const d = data(), s = (run.track ? RN : LG).stars(run);
+    if (run.track) game.stop();
     d.plays++; if (run.won) d.wins++;
-    run.coins = LG.coinsFor(run); d.coins += run.coins;
+    const S = run.track ? RN : LG;
+    run.earned = S.coinsFor(run); d.coins += run.earned;
     if (s > (d.stars[run.n] || 0)) d.stars[run.n] = s;
     d.team = team.slice();
     view = 'end'; ctx.save(); ctx.render();
     ctx.speak(run.won ? `Gewonnen! Je haalt ${s} ${s === 1 ? 'ster' : 'sterren'}.` : 'Helaas, de eindbaas was te sterk. Probeer het nog eens!');
   }
   function endView() {
-    const s = LG.stars(run), total = run.correct + run.wrong, short = endRes && !endRes.won ? endRes.need - endRes.mine + 1 : 0;
+    const s = (run.track ? RN : LG).stars(run), total = run.correct + run.wrong, short = endRes && !endRes.won ? endRes.need - endRes.mine + 1 : 0;
     return `<section class="lg-end ${run.won ? 'won' : 'lost'}"><span class="eyebrow">LEVEL ${run.n}</span><h1>${run.won ? 'Gewonnen!' : 'Net niet...'}</h1>
       <div class="lg-bigstars">${[1, 2, 3].map(k => `<i class="${k <= s ? 'on' : ''}">★</i>`).join('')}</div>
       <p>${run.won ? `Je ${endRes ? endRes.mine : run.army} ridders versloegen de eindbaas.` : run.hearts <= 0 ? 'Je kasteel had geen harten meer.' : `Je had nog ${short} ${short === 1 ? 'ridder' : 'ridders'} meer nodig.`}</p>
-      <p class="lg-stats">${run.correct} van de ${total} sommen goed · ${run.wavesWon} van de ${LG.WAVES} golven gewonnen</p>
-      <div class="lg-earn"><b>+${run.coins} 🪙</b><span>${run.correct} voor je goede sommen${s ? ` + ${s} × 5 voor je sterren` : ''}${run.won ? ' + 5 voor de winst' : ''}</span></div>
+      <p class="lg-stats">${run.correct} van de ${total} sommen goed${run.track ? '' : ` · ${run.wavesWon} van de ${LG.WAVES} golven gewonnen`}</p>
+      <div class="lg-earn"><b>+${run.earned} 🪙</b><span>${run.track ? run.coins + ' opgeraapt en verdiend' : run.correct + ' voor je goede sommen'}${s ? ` + ${s} × 5 voor je sterren` : ''}${run.won ? ' + 5 voor de winst' : ''}</span></div>
       ${!run.won ? '<p class="small-note">Tip: koop in de smederij betere spullen en probeer het dan nog eens.</p>' : ''}
       <ul class="lg-starrules"><li class="${s >= 1 ? 'on' : ''}">★ Versla de eindbaas</li><li class="${s >= 2 ? 'on' : ''}">★★ En hooguit 4 foutjes</li><li class="${s >= 3 ? 'on' : ''}">★★★ En hooguit 1 foutje, geen hart kwijt</li></ul>
       ${run.won ? `<button class="button yellow big" data-action="lg-egg">🥚 De eindbaas liet een ei achter!</button>` : ''}
@@ -160,12 +165,23 @@ export function createLeger(ctx) {
 
   stage.canvas.addEventListener('click', e => { if (!run || run.phase !== 'gate' || !gate || gate.chosen || anim) return; const r = stage.canvas.getBoundingClientRect(); handle({ dataset: { action: 'lg-gate', i: e.clientX - r.left < r.width / 2 ? '0' : '1' } }); });
   function startRun() {
-    run = LG.newRun(level, user().groep, team.map(id => ctx.PETS[id]), data().gear);
-    view = 'run'; card = null; last = null; gate = null; battleRes = null; endRes = null; fx = null; q = null; anim = false;
-    stage.reset(run.army, srcOf(team[0]));
+    const g = user().groep;
+    run = RN.newRun(level, g, team.map(id => ctx.PETS[id]), data().gear);
+    view = 'run'; fx = null; endRes = null;
+    const speed = (g <= 3 ? .62 : g === 4 ? .7 : .78) + Math.min(30, level) * .008;
+    game.start(run, { face: srcOf(team[0]), speed, onEnd: () => { endRes = run.finalRes || null; finish(); }, onChange: () => { const el = document.getElementById('lg-army-now'); if (el) el.textContent = run.army; } });
     ctx.render(); window.scrollTo(0, 0);
-    ctx.speak(`Level ${level}. Je begint met ${run.army} ridders. Kies een som om ridders te werven.`);
+    ctx.speak(`Level ${level}. Stuur je leger naar het goede antwoord. Veeg of tik naar links of rechts.`);
   }
+  function runnerView() {
+    queueMicrotask(() => game.mount(document.getElementById('lg-stage-slot')));
+    return `<div class="lg-run runner"><div class="lg-run-top"><button class="quiet" data-action="lg-quit">${I('back')} <span>Stop</span></button><b>Level ${run.n}</b><button class="icon-button" data-action="lg-pause" aria-label="Pauze">⏸</button></div>
+      <div class="lg-stage-slot big" id="lg-stage-slot"></div>
+      <div class="lg-powers">${run.leaders.map((l, i) => { const p = RN.powerFor(l.group), ok = RN.canUse(run, l); return `<button class="lg-pow ${l.used ? 'used' : ''}" data-action="lg-power" data-i="${i}" ${ok ? '' : 'disabled'} title="${esc(p.text)}">${ctx.petImg(l.id)}<span><b>${p.name}</b><small>${l.used ? 'gebruikt' : esc(p.text)}</small></span></button>`; }).join('')}</div>
+      ${fx ? `<div class="lg-fx" role="status">${I('sparkles')} <b>${fx.power.name}!</b> ${fx.msg}</div>` : ''}
+      <p class="lg-controls">Veeg of tik naar links en rechts, of tik op het antwoord. Toetsenbord: ← →</p></div>`;
+  }
+
   function pickTeamDefaults() {
     const owned = ctx.profile().pets, fav = ctx.profile().favorite;
     const order = [...data().team, fav, ...owned.slice().reverse()].filter(id => owned.includes(id));
@@ -178,6 +194,7 @@ export function createLeger(ctx) {
     if (view === 'map' || !run && view !== 'team') return mapView();
     if (view === 'team') return teamView();
     if (view === 'end') return endView();
+    if (run && run.track) return runnerView();
     const body = battleRes ? battleView() : run.phase === 'boss' || run.phase === 'end' || (last && last.boss) ? bossView() : last ? recruitView() : run.phase === 'gate' ? gateView() : run.phase === 'battle' ? battleView() : recruitView();
     queueMicrotask(() => stage.mount(document.getElementById('lg-stage-slot')));
     return `<div class="lg-run">${hud()}${body}</div>`;
@@ -207,23 +224,24 @@ export function createLeger(ctx) {
       case 'lg-next': if (!anim) next(); break;
       case 'lg-gate': { if (!gate || gate.chosen || anim) break; const i = +b.dataset.i, opt = gate[i], r = LG.chooseGate(run, opt); anim = true; ctx.render(); stage.choose(i, run.army).then(() => { anim = false; gate.chosen = { ...r, opt }; ctx.sound(r.best ? 'correct' : 'tap'); ctx.speak(r.best ? 'Slim gekozen!' : 'De andere ton was beter.'); ctx.save(); ctx.render(); }); break; }
       case 'lg-fight': { if (anim) break; const res = LG.battle(run); anim = true; ctx.render(); stage.battle(res.mine, res.enemies, res.skipped).then(() => { anim = false; stage.set(run.army); battleRes = res; ctx.sound(res.won ? 'correct' : 'tap'); ctx.speak(res.skipped ? 'De golf vloog over je heen.' : res.won ? `${res.mine} min ${res.enemies} is ${res.mine - res.enemies}. Gewonnen!` : 'Oei, de vijand was sterker. Je verliest een hart.'); ctx.save(); ctx.render(); }); break; }
-      case 'lg-power': { if (anim) break; const l = run && run.leaders[+b.dataset.i], res = l && LG.usePower(run, l); if (res) { fx = res; stage.set(run.army); if (run.phase === 'battle') stage.preview(LG.enemiesNow(run)); if (run.bossShown) stage.setBossHp(run.bossLeft); if (res.power.id === 'hint') run.hintOn = true; ctx.sound('correct'); ctx.speak(`${res.power.name}! ${res.msg}`); ctx.render(); } break; }
-      case 'lg-quit': ctx.modal(`<h2>Stoppen met dit level?</h2><p>Je oefenstappen zijn bewaard, maar dit level telt dan niet.</p><button class="button purple" data-action="close">Verder spelen</button><button class="button secondary" data-action="lg-quit-yes">Stoppen</button>`); break;
-      case 'lg-quit-yes': ctx.closeModal(); view = 'map'; run = null; ctx.render(); break;
+      case 'lg-power': { if (anim) break; const l = run && run.leaders[+b.dataset.i], res = l && (run.track ? RN : LG).usePower(run, l); if (res && run.track) { fx = res; game.powerUsed(); ctx.sound('correct'); ctx.speak(`${res.power.name}! ${res.msg}`); ctx.render(); break; } if (res) { fx = res; stage.set(run.army); if (run.phase === 'battle') stage.preview(LG.enemiesNow(run)); if (run.bossShown) stage.setBossHp(run.bossLeft); if (res.power.id === 'hint') run.hintOn = true; ctx.sound('correct'); ctx.speak(`${res.power.name}! ${res.msg}`); ctx.render(); } break; }
+      case 'lg-quit': game.pause(true); ctx.modal(`<h2>Stoppen met dit level?</h2><p>Je oefenstappen zijn bewaard, maar dit level telt dan niet.</p><button class="button purple" data-action="close">Verder spelen</button><button class="button secondary" data-action="lg-quit-yes">Stoppen</button>`); break;
+      case 'lg-quit-yes': ctx.closeModal(); game.stop(); view = 'map'; run = null; ctx.render(); break;
       case 'lg-retry': startRun(); break;
       case 'lg-nextlevel': level = Math.min(LG.LEVELS, run.n + 1); view = 'team'; ctx.render(); break;
-      case 'lg-egg': if (run && run.won && !run.egged) { run.egged = true; ctx.egg(LG.stars(run)); } break;
+      case 'lg-egg': if (run && run.won && !run.egged) { run.egged = true; ctx.egg((run.track ? RN : LG).stars(run)); } break;
+      case 'lg-pause': game.pause(!game.paused()); break;
       default: return false;
     }
     return true;
   }
   // voor tests: vul het juiste antwoord in
-  if (typeof window !== 'undefined') window.__lg = { stage, render: () => ctx.render(), state: () => ({ view, run, q, st, gate, battleRes, last, anim }), solve: () => { if (q && st && !st.locked) { PZ.reveal(q, st); st.locked = false; ctx.render(); } } };
+  if (typeof window !== 'undefined') window.__lg = { game, stage, render: () => ctx.render(), state: () => ({ view, run, q, st, gate, battleRes, last, anim }), solve: () => { if (q && st && !st.locked) { PZ.reveal(q, st); st.locked = false; ctx.render(); } } };
   function onBoss() { if (run && view === 'run' && run.phase === 'boss' && !anim && !battleRes && !run.bossShown) { run.bossShown = true; stage.boss(run.boss, run.bossLeft); }
     if (run && view === 'run' && run.phase === 'boss' && !anim && !battleRes && (!q || st.locked) && !last) newSum(false); }
   return {
     html: () => { onBoss(); return html(); }, handle,
-    key: e => { if (!run || !q || !st || st.locked || view !== 'run') return; if (e.key === 'Enter') { e.preventDefault(); answer(); return; } if (PZ.onKey(q, st, e)) ctx.render(); },
+    key: e => { if (run && run.track && view === 'run') { if (game.key(e)) e.preventDefault(); return; } if (!run || !q || !st || st.locked || view !== 'run') return; if (e.key === 'Enter') { e.preventDefault(); answer(); return; } if (PZ.onKey(q, st, e)) ctx.render(); },
     active: () => !!run && view === 'run' && !run.done,
     stop: () => { }
   };

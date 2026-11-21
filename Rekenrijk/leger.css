@@ -133,3 +133,10 @@
 .lg-earn span{font-size:13px;color:#6b5410}
 .lg-archers{background:#f3fbf6;border-radius:12px;padding:8px;color:#1e6a48!important;font-weight:700}
 .lg-shop-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+/* renspel */
+.lg-run.runner{max-width:900px}
+.lg-run-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.lg-run-top b{font-size:18px;color:var(--deep)}
+.lg-stage-slot.big{height:min(72vh,760px);min-height:420px;background:#8fd3ff}
+.lg-controls{text-align:center;color:var(--muted);font-size:13px;margin-top:6px}
+@media(max-width:700px){.lg-stage-slot.big{height:64vh;min-height:380px}}
